@@ -1,0 +1,18 @@
+#  SPDX-License-Identifier: GPL-3.0-or-later
+#  SPDX-FileCopyrightText: 2025 Jesper Devantier <jwd@defmacro.it>
+
+# Binaries
+/qqmgr
+qqmgr.exe
+
+# state
+.qqmgr
+.vscode
+
+# Config files (keep example)
+qqmgr.toml
+
+# Go build artifacts
+*.so
+*.dylib
+*.dll

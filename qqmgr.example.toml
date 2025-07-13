@@ -1,0 +1,52 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# SPDX-FileCopyrightText: 2025 Jesper Devantier <jwd@defmacro.it>
+[qemu]
+bin = "qemu-system-x86_64"
+img = "qemu-img"
+
+[vars]
+home = "/home/user"
+data_dir = "/data"
+
+[ssh]
+ServerAliveInterval = 300
+ServerAliveCountMax = 3
+UserKnownHostsFile = "/dev/null"
+StrictHostKeyChecking = "no"
+
+[vm.test-vm]
+cmd = [
+    "-nodefaults -machine q35,accel=kvm,kernel-irqchip=split",
+    "-cpu host -smp 2 -m 4096",
+    "-netdev user,id=net0,hostfwd=tcp::{{.vm.ssh_host}}-:{{.vm.ssh_vm}}",
+    "-device virtio-net-pci,netdev=net0",
+    "-drive id=boot,file={{.vm.boot_img}},format=qcow2,if=virtio",
+]
+
+[vm.test-vm.vars]
+ssh_host = 2089
+ssh_vm = 22
+boot_img = "{{.home}}/path/to/disk.img"
+
+[vm.test-vm.ssh]
+port = 2089
+vm_port = 22
+ServerAliveInterval = 60
+
+[vm.dev-vm]
+cmd = [
+    "-nodefaults -machine q35,accel=kvm",
+    "-cpu host -smp 4 -m 8192",
+    "-netdev user,id=net0,hostfwd=tcp::{{.vm.ssh_host}}-:{{.vm.ssh_vm}}",
+    "-device virtio-net-pci,netdev=net0",
+    "-drive id=boot,file={{.vm.boot_img}},format=qcow2,if=virtio",
+]
+
+[vm.dev-vm.vars]
+ssh_host = 2090
+ssh_vm = 22
+boot_img = "{{.data_dir}}/dev-disk.img"
+
+[vm.dev-vm.ssh]
+port = 2090
+vm_port = 22
