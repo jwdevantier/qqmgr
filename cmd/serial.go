@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"qqmgr/internal"
 	"qqmgr/internal/config"
 	"qqmgr/internal/vm"
 
@@ -38,8 +39,16 @@ By default, shows the last 10 lines. Use --follow to continuously monitor output
 			os.Exit(1)
 		}
 
+		// Create AppContext
+		appCtx, err := internal.NewAppContext(cfg, configFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating app context: %v\n", err)
+			os.Exit(1)
+		}
+		defer appCtx.Close()
+
 		// Resolve VM configuration
-		vmEntry, err := cfg.ResolveVM(vmName, configFile)
+		vmEntry, err := appCtx.ResolveVM(vmName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error resolving VM configuration: %v\n", err)
 			os.Exit(1)

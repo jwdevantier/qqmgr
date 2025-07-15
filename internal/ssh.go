@@ -10,14 +10,14 @@ import (
 )
 
 // GenerateSSHConfig generates an SSH config file for a specific VM
-func GenerateSSHConfig(cfg *config.Config, vmName string, configPath string) (string, error) {
-	vm, exists := cfg.VMs[vmName]
+func GenerateSSHConfig(appCtx *AppContext, vmName string) (string, error) {
+	vm, exists := appCtx.Config.VMs[vmName]
 	if !exists {
 		return "", fmt.Errorf("VM '%s' not found in configuration", vmName)
 	}
 
 	// Get the VM entry to determine the config file path
-	vmEntry, err := cfg.ResolveVM(vmName, configPath)
+	vmEntry, err := appCtx.ResolveVM(vmName)
 	if err != nil {
 		return "", fmt.Errorf("failed to resolve VM: %w", err)
 	}
@@ -43,7 +43,7 @@ func GenerateSSHConfig(cfg *config.Config, vmName string, configPath string) (st
 	}
 
 	// Write global SSH options with ControlPath fix
-	for key, value := range cfg.SSH {
+	for key, value := range appCtx.Config.SSH {
 		if key == "ControlPath" {
 			// Convert relative ControlPath to absolute path
 			if strValue, ok := value.(string); ok {

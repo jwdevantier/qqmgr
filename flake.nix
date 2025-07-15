@@ -27,6 +27,8 @@
           # For external tool development
           shellcheck
           jq
+          python3
+          cdrkit  # genisoimage
         ];
 
         shellHook = ''

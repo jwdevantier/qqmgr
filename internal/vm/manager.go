@@ -166,7 +166,7 @@ func (m *Manager) readPIDFile() (*int, error) {
 	}
 
 	// Validate PID is reasonable (positive and not too large)
-	if pid <= 0 || pid > (2 << 22) {
+	if pid <= 0 || pid > (2<<22) {
 		return nil, fmt.Errorf("PID %d is out of reasonable range", pid)
 	}
 

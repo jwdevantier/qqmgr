@@ -35,8 +35,16 @@ var sshCmd = &cobra.Command{
 			os.Exit(1)
 		}
 
+		// Create AppContext
+		appCtx, err := internal.NewAppContext(cfg, configFile)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error creating app context: %v\n", err)
+			os.Exit(1)
+		}
+		defer appCtx.Close()
+
 		// Generate SSH config file
-		sshConfigPath, err := internal.GenerateSSHConfig(cfg, vmName, configFile)
+		sshConfigPath, err := internal.GenerateSSHConfig(appCtx, vmName)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error generating SSH config: %v\n", err)
 			os.Exit(1)
@@ -69,8 +77,15 @@ func loadVMAndCheckStatus(vmName string) (*config.Config, *config.VmEntry, *vm.S
 		return nil, nil, nil, fmt.Errorf("loading configuration: %w", err)
 	}
 
+	// Create AppContext
+	appCtx, err := internal.NewAppContext(cfg, configFile)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("creating app context: %w", err)
+	}
+	defer appCtx.Close()
+
 	// Resolve VM configuration
-	vmEntry, err := cfg.ResolveVM(vmName, configFile)
+	vmEntry, err := appCtx.ResolveVM(vmName)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("resolving VM configuration: %w", err)
 	}
@@ -96,8 +111,15 @@ func loadVMAndCheckStatus(vmName string) (*config.Config, *config.VmEntry, *vm.S
 
 // getSSHConnectionInfo returns SSH config path and port for a VM
 func getSSHConnectionInfo(cfg *config.Config, vmName string, status *vm.Status) (string, int64, error) {
+	// Create AppContext
+	appCtx, err := internal.NewAppContext(cfg, configFile)
+	if err != nil {
+		return "", 0, fmt.Errorf("creating app context: %w", err)
+	}
+	defer appCtx.Close()
+
 	// Generate SSH config file
-	sshConfigPath, err := internal.GenerateSSHConfig(cfg, vmName, configFile)
+	sshConfigPath, err := internal.GenerateSSHConfig(appCtx, vmName)
 	if err != nil {
 		return "", 0, fmt.Errorf("generating SSH config: %w", err)
 	}

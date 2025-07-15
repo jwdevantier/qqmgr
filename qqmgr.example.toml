@@ -1,52 +1,119 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # SPDX-FileCopyrightText: 2025 Jesper Devantier <jwd@defmacro.it>
 [qemu]
-bin = "qemu-system-x86_64"
-img = "qemu-img"
+# bin = "qemu-system-x86_64"
+# img = "qemu-img"
+bin = "/home/jwd/repos/qemu/build/qemu-system-x86_64"
+img = "/home/jwd/repos/qemu/build/qemu-img"
 
-[vars]
-home = "/home/user"
-data_dir = "/data"
-
+# Global SSH options, applied to all VM's
+# Note that any SSH option can be applied here
+# TODO: vm-specific SSH settings?
 [ssh]
 ServerAliveInterval = 300
 ServerAliveCountMax = 3
 UserKnownHostsFile = "/dev/null"
 StrictHostKeyChecking = "no"
 
-[vm.test-vm]
+[vars]
+q35_base = "-nodefaults -machine q35,accel=kvm,kernel-irqchip=split -device intel-iommu,intremap=on -device virtio-rng-pci"
+home = "/home/user"
+data_dir = "/data"
+
+[vm.test]
 cmd = [
-    "-nodefaults -machine q35,accel=kvm,kernel-irqchip=split",
+    # entries in 'vars' can be referred to here (no prefix)
+    "{{.q35_base}}",
     "-cpu host -smp 2 -m 4096",
-    "-netdev user,id=net0,hostfwd=tcp::{{.vm.ssh_host}}-:{{.vm.ssh_vm}}",
+    # vm-specific variables (in 'vm.<vm-name>.vars')
+    # are available under the .vm prefix:
+    "-netdev user,id=net0,hostfwd=tcp::{{.vm.ssh.port}}-:{{.vm.ssh.vm_port}}",
     "-device virtio-net-pci,netdev=net0",
-    "-drive id=boot,file={{.vm.boot_img}},format=qcow2,if=virtio",
+    "-drive id=boot,file={{.img.fedora}},format=qcow2,if=virtio",
 ]
 
-[vm.test-vm.vars]
+# VM-specific variables, as seen above, entirely optional
+[vm.test.vars]
 ssh_host = 2089
 ssh_vm = 22
-boot_img = "{{.home}}/path/to/disk.img"
 
-[vm.test-vm.ssh]
+# VM-specific SSH options
+# `port` and `vm_port` are unique to qqmgr, all other options
+# are passed along to SSH itself.
+# `port` is required, `vm_port` defaults to 22
+# `port` and `vm_port` are accessible in the cmd string under .vm.ssh. 
+[vm.test.ssh]
 port = 2089
 vm_port = 22
 ServerAliveInterval = 60
 
-[vm.dev-vm]
-cmd = [
-    "-nodefaults -machine q35,accel=kvm",
-    "-cpu host -smp 4 -m 8192",
-    "-netdev user,id=net0,hostfwd=tcp::{{.vm.ssh_host}}-:{{.vm.ssh_vm}}",
-    "-device virtio-net-pci,netdev=net0",
-    "-drive id=boot,file={{.vm.boot_img}},format=qcow2,if=virtio",
+
+[img.fedora]
+builder = "cloud-init"
+# resize the base image to your needs.
+img_size = "10G"
+# the arguments used when starting QEMU for the final stage of
+# building a cloud-init-configured image. At this stage, we boot
+# the VM and supplies it the cloud-init config on an ISO image.
+# The VM will detect this at boot and start the configuration.
+#
+# This is a little clunky, but very flexible.
+build_args = [
+"-m",
+"2048",
+"-smp",
+"2",
+"-cpu",
+"host",
+"-enable-kvm",
+"-drive",
+"file={{.img_self}},if=virtio",
+"-cdrom",
+"{{.cloud_init_iso}}",
+"-boot",
+"order=c",
+"-nographic",
+"-device",
+"virtio-net-pci,netdev=net0",
+"-netdev",
+"user,id=net0",
+"-serial",
+"mon:stdio"
 ]
 
-[vm.dev-vm.vars]
-ssh_host = 2090
-ssh_vm = 22
-boot_img = "{{.data_dir}}/dev-disk.img"
+[img.fedora.base_img]
+url = "https://download.fedoraproject.org/pub/fedora/linux/releases/41/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-41-1.4.x86_64.qcow2"
+sha256sum = "6205ae0c524b4d1816dbd3573ce29b5c44ed26c9fbc874fbe48c41c89dd0bac2"
 
-[vm.dev-vm.ssh]
-port = 2090
-vm_port = 22
+# A cloud-init image MUST define at least a user-data and meta-data file
+# (the central files for configuring a cloud-init-enabled image).
+#
+# But the builder allows you to generate an arbitrary number of additional files
+# for inclusion into the cloud-init ISO.
+[[img.fedora.templates]]
+template = "templates/fedora_nvme_vfio/user-data.tpl"
+output = "user-data"
+
+[[img.fedora.templates]]
+template = "templates/meta-data.tpl"
+output = "meta-data"
+
+# Variables which are provided when rendering the templates above
+[img.fedora.env]
+hostname = "fedora-vfio"
+
+# Some variables may require some scripting. For example, ingesting the SSH
+# pubkey is easier than copying it in manually.
+# In these cases, defined a script - the script receives a single JSONL blob of all
+# values in `img.<image name>.env` and must return as its last output a single JSONL blob
+# representing the new/updated set of variables provided to the templates.
+[img.fedora.env_hook]
+interpreter = "bash"
+script = "scripts/generate_env.sh"
+
+# You may wish to include additional files/software into the image, these files
+# are downloaded and cached, and the builder automatically includes them onto the ISO.
+[[img.fedora.sources]]
+url = "https://github.com/SamsungDS/libvfn/archive/refs/tags/v5.1.0.tar.gz"
+sha256sum = "f3df17020e00ebe921eecb3d037afbc1c6d1f98934c522f178ec7ca2b0374ae8"
+filename = "libvfn.tgz"

@@ -9,6 +9,7 @@ import (
 	"os"
 	"time"
 
+	"qqmgr/internal"
 	"qqmgr/internal/config"
 	"qqmgr/internal/vm"
 
@@ -31,8 +32,16 @@ var statusCmd = &cobra.Command{
 			return
 		}
 
+		// Create AppContext
+		appCtx, err := internal.NewAppContext(cfg, configFile)
+		if err != nil {
+			fmt.Printf("Error creating app context: %v\n", err)
+			return
+		}
+		defer appCtx.Close()
+
 		// Resolve VM configuration
-		vmEntry, err := cfg.ResolveVM(vmName, configFile)
+		vmEntry, err := appCtx.ResolveVM(vmName)
 		if err != nil {
 			fmt.Printf("Error resolving VM '%s': %v\n", vmName, err)
 			return
