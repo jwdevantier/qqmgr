@@ -75,7 +75,7 @@ var startCmd = &cobra.Command{
 		}
 
 		// Start the VM
-		if err := startVM(vmEntry); err != nil {
+		if err := startVM(appCtx.Config.Qemu.Bin, vmEntry); err != nil {
 			fmt.Fprintf(os.Stderr, "Error starting VM: %v\n", err)
 			os.Exit(1)
 		}
@@ -109,17 +109,9 @@ func validateVMArguments(cmd []string) error {
 }
 
 // startVM starts the QEMU process with proper error handling
-func startVM(vmEntry *config.VmEntry) error {
+func startVM(qemuBin string, vmEntry *config.VmEntry) error {
 	// Get the full command with auto-injected arguments
 	fullCmd := vmEntry.GetFullCommand()
-
-	// Find QEMU binary from config or use default
-	qemuBin := "qemu-system-x86_64" // default
-	if configFile != "" {
-		if cfg, err := config.LoadFromFile(configFile); err == nil && cfg.Qemu.Bin != "" {
-			qemuBin = cfg.Qemu.Bin
-		}
-	}
 
 	// Print debug information if debug flag is enabled
 	if debugFlag {
