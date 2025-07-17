@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 
 	"qqmgr/internal"
@@ -25,7 +26,7 @@ var sshCmd = &cobra.Command{
 		vmName := args[0]
 		var command string
 		if len(args) > 1 {
-			command = args[1]
+			command = strings.Join(args[1:], " ")
 		}
 
 		// Load configuration and get VM status
