@@ -48,15 +48,40 @@ func init() {
 	rootCmd.AddCommand(putCmd)
 }
 
+// returns true iff path is a directory
+func isLocalPathDirectory(path string) bool {
+	info, err := os.Stat(path)
+	// best effort
+	out := err == nil && info.IsDir()
+	fmt.Printf("isLocalPathDirectory\n")
+	if err != nil {
+		fmt.Printf("   err caught\n")
+	} else {
+		fmt.Printf("   err is nil\n")
+	}
+	if info.IsDir() {
+		fmt.Printf("isDir TRUE")
+	}
+	fmt.Printf("isLocalPathDirectory: %b\n", out)
+	return out
+}
+
 // executeSCPPut runs the SCP command to copy a file from local to VM
 func executeSCPPut(sshConfigPath string, sshPort int64, localPath, remotePath string) error {
 	// Build SCP command arguments
 	args := []string{
 		"-F", sshConfigPath, // Use generated SSH config
 		"-P", fmt.Sprintf("%d", sshPort), // SCP port (capital P)
-		localPath,                               // Local file path
-		fmt.Sprintf("localhost:%s", remotePath), // Remote file path
 	}
+
+	if isLocalPathDirectory(localPath) {
+		args = append(args, "-r")
+	}
+
+	args = append(args,
+		localPath,
+		fmt.Sprintf("localhost:%s", remotePath),
+	)
 
 	// Create command
 	scpCmd := exec.Command("scp", args...)
