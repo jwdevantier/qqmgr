@@ -16,14 +16,14 @@ import (
 )
 
 var (
-	followFlag bool
-	linesFlag  int
+	stderrFollowFlag bool
+	stderrLinesFlag  int
 )
 
-var serialCmd = &cobra.Command{
-	Use:   "serial [vm-name]",
-	Short: "Display serial output from a virtual machine",
-	Long: `Display serial output from a virtual machine. 
+var stderrCmd = &cobra.Command{
+	Use:   "stderr [vm-name]",
+	Short: "Display QEMU stderr",
+	Long: `Display QEMU stderr output. 
 By default, shows the last 10 lines. Use --follow to continuously monitor output.`,
 	Args: cobra.ExactArgs(1),
 	Run: func(cmd *cobra.Command, args []string) {
@@ -66,16 +66,16 @@ By default, shows the last 10 lines. Use --follow to continuously monitor output
 			os.Exit(1)
 		}
 
-		// Display serial output
-		if err := tail.DisplayFileOutput(vmEntry.SerialFilePath(), followFlag, linesFlag); err != nil {
-			fmt.Fprintf(os.Stderr, "Error displaying serial output: %v\n", err)
+		// Display stderr output
+		if err := tail.DisplayFileOutput(vmEntry.QemuStderrPath(), stderrFollowFlag, stderrLinesFlag); err != nil {
+			fmt.Fprintf(os.Stderr, "Error displaying stderr output: %v\n", err)
 			os.Exit(1)
 		}
 	},
 }
 
 func init() {
-	serialCmd.Flags().BoolVarP(&followFlag, "follow", "f", false, "Follow the serial output (like tail -f)")
-	serialCmd.Flags().IntVarP(&linesFlag, "lines", "n", 10, "Number of lines to show (default: 10)")
-	rootCmd.AddCommand(serialCmd)
+	stderrCmd.Flags().BoolVarP(&stderrFollowFlag, "follow", "f", false, "Follow the stderr output (like tail -f)")
+	stderrCmd.Flags().IntVarP(&stderrLinesFlag, "lines", "n", 10, "Number of lines to show (default: 10)")
+	rootCmd.AddCommand(stderrCmd)
 }
