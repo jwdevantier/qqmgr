@@ -3,8 +3,10 @@
 package cmd
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"strings"
@@ -127,32 +129,33 @@ func startVM(qemuBin string, vmEntry *config.VmEntry) error {
 	// Build the command
 	cmd := exec.Command(qemuBin, fullCmd...)
 
-	// Set up stderr capture for error reporting
-	stderrPipe, err := cmd.StderrPipe()
+	// Create log files for QEMU stdout/stderr
+	stdoutFile, err := os.Create(vmEntry.QemuStdoutPath())
 	if err != nil {
-		return fmt.Errorf("failed to create stderr pipe: %w", err)
+		return fmt.Errorf("failed to create stdout log file: %w", err)
 	}
+	defer stdoutFile.Close()
+
+	stderrFile, err := os.Create(vmEntry.QemuStderrPath())
+	if err != nil {
+		return fmt.Errorf("failed to create stderr log file: %w", err)
+	}
+	defer stderrFile.Close()
+
+	// Set up stdout redirection to file
+	cmd.Stdout = stdoutFile
+	cmd.ExtraFiles = []*os.File{stdoutFile, stderrFile}
+
+	// For stderr, we need both file logging and error capture
+	// Create a buffer to capture stderr for error reporting
+	var stderrBuf bytes.Buffer
+	stderrMultiWriter := io.MultiWriter(stderrFile, &stderrBuf)
+	cmd.Stderr = stderrMultiWriter
 
 	// Start the process
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("failed to start QEMU process: %w", err)
 	}
-
-	// Create a channel to capture stderr output
-	stderrCh := make(chan string)
-	go func() {
-		defer close(stderrCh)
-		buffer := make([]byte, 1024)
-		for {
-			n, err := stderrPipe.Read(buffer)
-			if n > 0 {
-				stderrCh <- string(buffer[:n])
-			}
-			if err != nil {
-				break
-			}
-		}
-	}()
 
 	// Wait for the process to either start successfully or fail
 	done := make(chan error, 1)
@@ -164,10 +167,7 @@ func startVM(qemuBin string, vmEntry *config.VmEntry) error {
 	select {
 	case err := <-done:
 		// Process exited - this usually means an error
-		stderrOutput := ""
-		for output := range stderrCh {
-			stderrOutput += output
-		}
+		stderrOutput := stderrBuf.String()
 
 		if stderrOutput != "" {
 			return fmt.Errorf("QEMU failed to start:\n%s", stderrOutput)
@@ -197,21 +197,10 @@ func startVM(qemuBin string, vmEntry *config.VmEntry) error {
 			return fmt.Errorf("QEMU process failed to start")
 		}
 
-		// Collect any stderr output for debugging
-		stderrOutput := ""
-		for {
-			select {
-			case output := <-stderrCh:
-				stderrOutput += output
-			default:
-				goto checkProcess
-			}
-		}
-	checkProcess:
-
 		// Check if process is still running
 		if err := cmd.Process.Signal(os.Signal(nil)); err != nil {
 			// Process is not running
+			stderrOutput := stderrBuf.String()
 			if stderrOutput != "" {
 				return fmt.Errorf("QEMU failed to start:\n%s", stderrOutput)
 			}

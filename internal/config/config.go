@@ -144,6 +144,18 @@ func (v *VmEntry) SshConfigPath() string {
 	return absPath
 }
 
+// QemuStdoutPath returns the path to the QEMU stdout log file
+func (v *VmEntry) QemuStdoutPath() string {
+	absPath, _ := filepath.Abs(filepath.Join(v.DataDir, "qemu-stdout.log"))
+	return absPath
+}
+
+// QemuStderrPath returns the path to the QEMU stderr log file
+func (v *VmEntry) QemuStderrPath() string {
+	absPath, _ := filepath.Abs(filepath.Join(v.DataDir, "qemu-stderr.log"))
+	return absPath
+}
+
 // GetAutoInjectedArgs returns the auto-injected QEMU arguments as specified in the design
 func (v *VmEntry) GetAutoInjectedArgs() []string {
 	return []string{
