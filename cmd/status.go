@@ -81,8 +81,8 @@ var statusCmd = &cobra.Command{
 				"serial_file":    status.SerialFile,
 				"qmp_socket":     status.QMPSocket,
 				"monitor_socket": status.MonitorSocket,
-				"qemu_stdout":    vmEntry.QemuStdoutPath(),
-				"qemu_stderr":    vmEntry.QemuStderrPath(),
+				"qemu_stdout":    getLogFilePath(vmEntry.QemuStdoutPath(), ""),
+				"qemu_stderr":    getLogFilePath(vmEntry.QemuStderrPath(), ""),
 			}
 
 			// Add status details if available
@@ -129,8 +129,8 @@ var statusCmd = &cobra.Command{
 			fmt.Printf("  Serial File: %s\n", status.SerialFile)
 			fmt.Printf("  QMP Socket: %s\n", status.QMPSocket)
 			fmt.Printf("  Monitor Socket: %s\n", status.MonitorSocket)
-			fmt.Printf("  QEMU Stdout: %s\n", vmEntry.QemuStdoutPath())
-			fmt.Printf("  QEMU Stderr: %s\n", vmEntry.QemuStderrPath())
+			fmt.Printf("  QEMU Stdout: %s\n", getLogFilePath(vmEntry.QemuStdoutPath(), "<not captured>"))
+			fmt.Printf("  QEMU Stderr: %s\n", getLogFilePath(vmEntry.QemuStderrPath(), "<not captured>"))
 
 			// Show status details if available
 			if status.StatusDetails != nil {
@@ -140,6 +140,14 @@ var statusCmd = &cobra.Command{
 			}
 		}
 	},
+}
+
+// getLogFilePath returns the log file path if it exists, otherwise returns fallback
+func getLogFilePath(path, fallback string) string {
+	if _, err := os.Stat(path); err == nil {
+		return path
+	}
+	return fallback
 }
 
 func init() {

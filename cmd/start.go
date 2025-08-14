@@ -15,6 +15,7 @@ import (
 	"qqmgr/internal"
 	"qqmgr/internal/config"
 	"qqmgr/internal/vm"
+	"qqmgr/internal/vmutil"
 
 	"github.com/spf13/cobra"
 )
@@ -75,6 +76,9 @@ var startCmd = &cobra.Command{
 			fmt.Fprintf(os.Stderr, "Error creating runtime directory: %v\n", err)
 			os.Exit(1)
 		}
+
+		// Delete existing stdout/stderr log files since we will create new ones
+		vmutil.DeleteLogFiles(vmEntry)
 
 		// Start the VM
 		if err := startVM(appCtx.Config.Qemu.Bin, vmEntry); err != nil {
